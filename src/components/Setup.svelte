@@ -208,7 +208,7 @@
       </div>
       
       <div class="default-paths">
-        <label>Common locations:</label>
+        <p class="paths-label">Common locations:</p>
         <div class="path-buttons">
           {#each defaultPaths as path}
             <button 
@@ -375,7 +375,7 @@
     margin-bottom: 1.5rem;
   }
   
-  .default-paths label {
+  .default-paths .paths-label {
     display: block;
     margin-bottom: 0.75rem;
     font-size: 0.875rem;
