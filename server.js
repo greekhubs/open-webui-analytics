@@ -207,8 +207,8 @@ function adaptQuery(sqliteQuery) {
   let query = sqliteQuery
     .replace(/json_extract\(([^,]+),\s*'\$\.([^']+)'\)/g, '$1->\'$2\'')
     .replace(/json_extract\(([^,]+),\s*'\$\.([^.]+)\.([^']+)'\)/g, '$1->\'$2\'->\'$3\'')
-    .replace(/json_each\(json_extract\(([^,]+),\s*'\$\.([^']+)'\)\)/g, 'jsonb_array_elements($1->\'$2\')')
-    .replace(/json_each\(([^)]+)\)/g, 'jsonb_array_elements($1)')
+    .replace(/json_each\(json_extract\(([^,]+),\s*'\$\.([^']+)'\)\)/g, 'jsonb_array_elements(($1)::jsonb->\'$2\')')
+    .replace(/json_each\(([^)]+)\)/g, 'jsonb_array_elements(($1)::jsonb)')
     .replace(/date\(([^,]+),\s*'unixepoch'\)/g, 'date(to_timestamp($1))')
     .replace(/datetime\(([^,]+),\s*'unixepoch'\)/g, 'to_timestamp($1)')
   
@@ -232,7 +232,7 @@ app.get('/api/stats/overview', async (req, res) => {
         SELECT 
           SUM(LENGTH(msg->>'content')) as total_chars
         FROM chat c,
-             jsonb_array_elements(c.chat->'history'->'messages') as msg
+             jsonb_array_elements((c.chat)::jsonb->'history'->'messages') as msg
         WHERE msg->>'content' IS NOT NULL
           AND msg->>'content' != ''
       `
@@ -255,7 +255,7 @@ app.get('/api/stats/overview', async (req, res) => {
       toolQuery = `
         SELECT COUNT(*) as count
         FROM chat c,
-             jsonb_array_elements(c.chat->'history'->'messages') as msg,
+             jsonb_array_elements((c.chat)::jsonb->'history'->'messages') as msg,
              jsonb_array_elements(msg->'statusHistory') as status
         WHERE status->>'action' IS NOT NULL
           AND (status->>'done')::int = 1
@@ -311,7 +311,7 @@ app.get('/api/stats/models', async (req, res) => {
           COUNT(*) as usage_count,
           SUM(LENGTH(COALESCE(msg->>'content', ''))) as total_chars
         FROM chat c,
-             jsonb_array_elements(c.chat->'history'->'messages') as msg
+             jsonb_array_elements((c.chat)::jsonb->'history'->'messages') as msg
         WHERE msg->>'model' IS NOT NULL
         GROUP BY model
         ORDER BY usage_count DESC
@@ -405,7 +405,7 @@ app.get('/api/stats/users', async (req, res) => {
             c.user_id,
             SUM(LENGTH(COALESCE(msg->>'content', ''))) / 4 as estimated_tokens
           FROM chat c,
-               jsonb_array_elements(c.chat->'history'->'messages') as msg
+               jsonb_array_elements((c.chat)::jsonb->'history'->'messages') as msg
           WHERE msg->>'content' IS NOT NULL
             AND msg->>'content' != ''
           GROUP BY c.user_id
@@ -504,7 +504,7 @@ app.get('/api/stats/tools', async (req, res) => {
           COUNT(DISTINCT c.id) as unique_chats,
           'builtin' as tool_type
         FROM chat c,
-             jsonb_array_elements(c.chat->'history'->'messages') as msg,
+               jsonb_array_elements((c.chat)::jsonb->'history'->'messages') as msg,
              jsonb_array_elements(msg->'statusHistory') as status
         WHERE status->>'action' IS NOT NULL
           AND (status->>'done')::int = 1
@@ -546,7 +546,7 @@ app.get('/api/stats/tools', async (req, res) => {
               ELSE NULL
             END as tool_name
           FROM chat c,
-               jsonb_array_elements(c.chat->'history'->'messages') as msg
+               jsonb_array_elements((c.chat)::jsonb->'history'->'messages') as msg
           WHERE msg->>'content' LIKE '%<details type="tool_calls"%'
             AND msg->>'content' LIKE '%done="true"%'
         )
